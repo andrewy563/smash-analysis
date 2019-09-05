@@ -3,7 +3,7 @@ import struct
 import sys
 
 
-def decode_file(f):
+def decode_file(replay):
     # decodes ubjson file to json
     decoded = ubjson.load(replay)
     return decoded
@@ -12,15 +12,15 @@ def decode_file(f):
 def process_event_payload(decoded):
     length = {"event": 0, "start": 0, "pre": 0, "post": 0, "end": 0}
     length["event"] = decoded["raw"][1]
-    for i in range(0, length["event"], 3):
-        if decoded["raw"][2 + i] == 0x36:
-            length["start"] = struct.unpack(">h", decoded["raw"][i + 3 : i + 5])[0]
-        elif decoded["raw"][2 + i] == 0x37:
-            length["pre"] = struct.unpack(">h", decoded["raw"][i + 3 : i + 5])[0]
-        elif decoded["raw"][2 + i] == 0x38:
-            length["post"] = struct.unpack(">h", decoded["raw"][i + 3 : i + 5])[0]
-        elif decoded["raw"][2 + i] == 0x39:
-            length["end"] = struct.unpack(">h", decoded["raw"][i + 3 : i + 5])[0]
+    for i in range(2, length["event"], 3):
+        if decoded["raw"][i] == 0x36:
+            length["start"] = struct.unpack(">h", decoded["raw"][i + 1 : i + 3])[0]
+        elif decoded["raw"][i] == 0x37:
+            length["pre"] = struct.unpack(">h", decoded["raw"][i + 1 : i + 3])[0]
+        elif decoded["raw"][i] == 0x38:
+            length["post"] = struct.unpack(">h", decoded["raw"][i + 1 : i + 3])[0]
+        elif decoded["raw"][i] == 0x39:
+            length["end"] = struct.unpack(">h", decoded["raw"][i + 1 : i + 3])[0]
         else:
             sys.exit("Error reading event payload!")
     return length
@@ -31,7 +31,11 @@ def process_game_start(payload):
     if payload[0] != 0x36:
         sys.exit("Error! process_game_start() did not receive a game_start event!")
     out["event"] = "gamestart"
-    out["version"] = payload[0x1]
+    out["version"] = {
+        "major": payload[0x1],
+        "minor": payload[0x2],
+        "build": payload[0x3],
+    }
     out["teams"] = payload[0xD]
     out["port1"] = {
         "char_id": payload[0x65],
@@ -62,17 +66,28 @@ def process_game_start(payload):
         "team_id": payload[0x6E + 0x24 * 3],
     }
     out["seed"] = struct.unpack(">i", payload[0x13D : 0x13D + 4])[0]
-    out["ucf1"] = struct.unpack(">i", payload[0x141 : 0x141 + 4])[0]
-    out["ucf2"] = struct.unpack(">i", payload[0x141 + 4 : 0x141 + 8])[0]
-    out["ucf3"] = struct.unpack(">i", payload[0x141 + 8 : 0x141 + 12])[0]
-    out["ucf4"] = struct.unpack(">i", payload[0x141 + 12 : 0x141 + 16])[0]
+    if out["version"]["major"] < 1:
+        return out
+    out["dashback1"] = struct.unpack(">i", payload[0x141 : 0x141 + 4])[0]
+    out["dashback2"] = struct.unpack(">i", payload[0x141 + 4 : 0x141 + 8])[0]
+    out["dashback3"] = struct.unpack(">i", payload[0x141 + 8 : 0x141 + 12])[0]
+    out["dashback4"] = struct.unpack(">i", payload[0x141 + 12 : 0x141 + 16])[0]
+    out["shielddrop1"] = struct.unpack(">i", payload[0x145 : 0x145 + 4])[0]
+    out["shielddrop2"] = struct.unpack(">i", payload[0x145 + 4 : 0x145 + 8])[0]
+    out["shielddrop3"] = struct.unpack(">i", payload[0x145 + 8 : 0x145 + 12])[0]
+    out["shielddrop4"] = struct.unpack(">i", payload[0x145 + 12 : 0x145 + 16])[0]
+    if out["version"]["major"] == 1 and out["version"]["minor"] <= 3:
+        return out
     out["nametag1"] = payload[0x161 : 0x161 + 8]
     out["nametag2"] = payload[0x161 + 8 : 0x161 + 16]
     out["nametag3"] = payload[0x161 + 16 : 0x161 + 24]
     out["nametag4"] = payload[0x161 + 24 : 0x161 + 32]
+    if out["version"]["major"] == 1 and out["version"]["minor"] <= 5:
+        return out
     out["PAL"] = payload[0x1A1]
-    if out["version"] >= 2:
-        out["frozenps"] = payload[0x1A2]
+    if out["version"]["major"] < 2:
+        return out
+    out["frozenps"] = payload[0x1A2]
     return out
 
 
