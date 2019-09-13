@@ -2,11 +2,46 @@ import ubjson
 import struct
 import sys
 
+char_dict = {
+    0: "falcon",
+    1: "dk",
+    2: "fox",
+    3: "gnw",
+    4: "kirby",
+    5: "bowser",
+    6: "link",
+    7: "luigi",
+    8: "mario",
+    9: "marth",
+    10: "mewtwo",
+    11: "ness",
+    12: "peach",
+    13: "pikachu",
+    14: "ic",
+    15: "puff",
+    16: "samus",
+    17: "yoshi",
+    18: "zelda",
+    19: "sheik",
+    20: "falco",
+    21: "yl",
+    22: "drmario",
+    23: "roy",
+    24: "pichu",
+    25: "ganon",
+}
+
 
 def decode_file(replay):
     # decodes ubjson file to json
     decoded = ubjson.load(replay)
     return decoded
+
+
+def convert_to_character(char_id):
+    if char_id > 25:
+        return "other"
+    return char_dict[char_id]
 
 
 def process_event_payload(decoded):
@@ -38,28 +73,28 @@ def process_game_start(payload):
     }
     out["teams"] = payload[0xD]
     out["port1"] = {
-        "char_id": payload[0x65],
+        "char_id": convert_to_character(payload[0x65]),
         "type": payload[0x66],
         "stock_start": payload[0x67],
         "color": payload[0x68],
         "team_id": payload[0x6E],
     }
     out["port2"] = {
-        "char_id": payload[0x65 + 0x24],
+        "char_id": convert_to_character(payload[0x65 + 0x24]),
         "type": payload[0x66 + 0x24],
         "stock_start": payload[0x67 + 0x24],
         "color": payload[0x68 + 0x24],
         "team_id": payload[0x6E + 0x24],
     }
     out["port3"] = {
-        "char_id": payload[0x65 + 0x24 * 2],
+        "char_id": convert_to_character(payload[0x65 + 0x24 * 2]),
         "type": payload[0x66 + 0x24 * 2],
         "stock_start": payload[0x67 + 0x24 * 2],
         "color": payload[0x68 + 0x24 * 2],
         "team_id": payload[0x6E + 0x24 * 2],
     }
     out["port4"] = {
-        "char_id": payload[0x65 + 0x24 * 3],
+        "char_id": convert_to_character(payload[0x65 + 0x24 * 3]),
         "type": payload[0x66 + 0x24 * 3],
         "stock_start": payload[0x67 + 0x24 * 3],
         "color": payload[0x68 + 0x24 * 3],
@@ -91,9 +126,22 @@ def process_game_start(payload):
     return out
 
 
+def process_game_end(payload):
+    out = {}
+    if payload[0] != 0x39:
+        sys.exit("Error! process_game_end() did not receive a game_end event!")
+    out["end"] = payload[1]
+    if len(payload) == 3:
+        out["lras"] = payload[2]
+    return out
+
+
 if __name__ == "__main__":
     replay = open("./replays/test1.slp", "rb")
     decoded = decode_file(replay)
     length = process_event_payload(decoded)
+    print(length)
     index = 1 + length["event"]
-    start = process_game_start(decoded["raw"][index : index + length["start"]])
+    start = process_game_start(decoded["raw"][index : index + length["start"] + 1])
+    end = process_game_end(decoded["raw"][len(decoded["raw"]) - 1 - length["end"] :])
+    print(end)
