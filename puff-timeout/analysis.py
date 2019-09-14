@@ -14,8 +14,8 @@ from replayprocessor import (
     convert_to_character,
 )
 
-long_game = 60 * 60 * 6
-analysis_char = "samus"
+long_game = 60 * 60 * 5
+analysis_char = "falcon"
 handwarmer = 60 * 45
 
 
@@ -138,7 +138,7 @@ def process_files():
                     elif decoded["metadata"]["lastFrame"] >= (long_game):
                         add_characters(start, total_long_game_character)
                     replay_count += 1
-                if replay_count % 500 == 0:
+                if replay_count % 1000 == 0:
                     print("{} replays processed".format(replay_count))
     print(
         "{} median: {:.2f} seconds".format(
@@ -147,6 +147,11 @@ def process_files():
     )
     print(
         "{} mean: {:.2f} seconds".format(analysis_char, (np.mean(puff_game_time) / 60))
+    )
+    print(
+        "{} st. deviation: {:.2f} seconds".format(
+            analysis_char, (np.std(puff_game_time) / 60)
+        )
     )
     print("{} timeouts: {}".format(analysis_char, puff_timeouts))
     print("{} timeout characters: {}".format(analysis_char, puff_time_character))
@@ -164,6 +169,11 @@ def process_files():
             analysis_char, np.mean(non_puff_game_time) / 60
         )
     )
+    print(
+        "non-{} st. deviation: {:.2f} seconds".format(
+            analysis_char, (np.std(non_puff_game_time) / 60)
+        )
+    )
     print("non-{} timeouts: {}".format(analysis_char, non_puff_timeouts))
     print(
         "non-{} timeout characters: {}".format(analysis_char, non_puff_time_character)
@@ -174,6 +184,7 @@ def process_files():
     print()
     print("total median: {0:.2f} seconds".format(np.median(game_time) / 60))
     print("total mean: {0:.2f} seconds".format(np.mean(game_time) / 60))
+    print("total st. deviation: {:.2f} seconds".format((np.std(game_time) / 60)))
     print("total timeouts: {}".format(non_puff_timeouts + puff_timeouts))
     print("total timeout characters: {}".format(total_time_character))
     print("total long game: {}".format(puff_long_game + non_puff_long_game))
